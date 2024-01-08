@@ -33,3 +33,8 @@ config add .gitignore
 
 Remember to add your public ssh key to [github](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
+And on new machines do this:
+
+```
+config config --local status.showUntrackedFiles no
+```
