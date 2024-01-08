@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+
+#
+# Remove an entry from $PATH (or any other colon separated line) that
+# matches the given regexes (multiple regexes are treated as an
+# OR). E.g.
+
+#
+# setenv PATH `echo $PATH | ~/programs/bin/remove_from_path '.*iptet.*' '.*work.main.*'`
+#
+# Old way using AWK (which wouldn't work in some cases):
+#   awk -v RS=':' -v ORS=':' -v pattern=$1 '$1 !~ pattern { if (NR > 1) printf ORS; printf $1 }' -
+#
+
+use strict;
+use warnings;
+
+my @before;
+my @after;
+
+# Avoid processing the ARGV as files to read (happens when using <>)
+# by specifying STDIN explicitly
+while (<STDIN>) {
+    @before = split /:/;
+    foreach my $e (@before) {
+        # Remove empty entries first
+        next if length $e == 0;
+        # grep does a loop over ARGV
+        push @after, $e unless grep { $e =~ /$_/ } @ARGV;
+    }
+    print join ":", @after;
+}
