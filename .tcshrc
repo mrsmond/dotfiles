@@ -1,0 +1,64 @@
+set path = ($HOME/bin $path)
+
+# This isn't set on some machines, which means unicode chars in my prompt don't
+# display properly
+setenv LANG en_US.UTF-8
+
+if ( -e ~/.aliases ) source ~/.aliases
+if ( -e ~/.tcsh_complete ) source ~/.tcsh_complete
+
+# Shell Customisation
+# If in tmux, we don't need the hostname as it appears in the status bar
+if ($?TMUX) then
+  set prompt='%{\033[35m%}[%{\033[32m%}%c3%{\033[35m%}]$%{\033[0m%} '
+else
+  set prompt='%{\033[35m%}[@%m:%{\033[32m%}%c3%{\033[35m%}]$%{\033[0m%} '
+endif
+
+set ellipsis
+
+# Also sets the time format to include the date (the format of this is the same
+# as prompt). It would be great to show the directory at the time of the command
+# in the history output, but %~ which works in prompt to show the cwd, here
+# shows the cwd of where you called the history command from *NOT* at the time
+# of the command.
+set history = (5000 "%h  %D/%W/%Y  %T  %R\n")
+set savehist = (5000 merge) # Save and merge with existing saved
+set histfile = ~/.tcsh_history
+# Erase the old duplicate if the same but newer history entry is saved
+set histdup = erase
+# Load in the history
+history -M
+# When accessing a history event TAB will auto-complete it, e.g. !echo
+# then TAB (although history-search-backward/forward M-p/n works
+# better)
+set autoexpand
+# magic-space means to expand history items when you type SPACE (the
+# alternative is expand-history which is bound to M-SPACE)
+bindkey " " magic-space
+
+eval `dircolors -c ~/.coloursrc`
+
+# No beep or blinking please!
+set nobeep
+
+# Turn off flow control to avoid freezing the screen by accidentally pressing
+# CTRL-S
+stty -ixon
+
+# Unmap the use of C-\ to send SIGQUIT since I use this for screen so
+# that C-a doesn't interfere which emacs
+stty quit undef
+
+## Do some nice TAB-completion with colouring
+set autolist
+set autoexpand
+set color
+set colorcat
+
+# Case insensitve TAB-completion and considers periods, hyphens and
+# underscores to be word separators and hyphens and underscores to be
+# equivalent
+set complete = enhance
+
+setenv RIPGREP_CONFIG_PATH ~/.rgrc
