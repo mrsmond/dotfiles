@@ -62,3 +62,15 @@ set colorcat
 set complete = enhance
 
 setenv RIPGREP_CONFIG_PATH ~/.rgrc
+
+# Set up modules
+source /workarea/apaweuc1svm02/derek.graham/tools/tacc/lmod/latest/init/cshrc
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+if ( -f "/workarea/apaweuc1svm02/derek.graham/tools/miniconda/etc/profile.d/conda.csh" ) then
+source "/workarea/apaweuc1svm02/derek.graham/tools/miniconda/etc/profile.d/conda.csh"
+else
+setenv PATH "/workarea/apaweuc1svm02/derek.graham/tools/miniconda/bin:$PATH"
+endif
+# <<< conda initialize <<<
