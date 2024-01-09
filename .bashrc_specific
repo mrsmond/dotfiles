@@ -1,0 +1,37 @@
+# Common modulefiles
+source /tools/local/initscripts/bashrc
+
+# The vnc machine doesn't have access to /workarea, only the comp machines do
+if [ -e /workarea ]; then
+  # >>> conda initialize >>>
+  # !! Contents within this block are managed by 'conda init' !!
+  __conda_setup="$('/workarea/apaweuc1svm02/derek.graham/tools/miniconda/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+  if [ $? -eq 0 ]; then
+      eval "$__conda_setup"
+  else
+      if [ -f "/workarea/apaweuc1svm02/derek.graham/tools/miniconda/etc/profile.d/conda.sh" ]; then
+          . "/workarea/apaweuc1svm02/derek.graham/tools/miniconda/etc/profile.d/conda.sh"
+      else
+          export PATH="/workarea/apaweuc1svm02/derek.graham/tools/miniconda/bin:$PATH"
+      fi
+  fi
+  unset __conda_setup
+  # <<< conda initialize <<<
+  
+  # For some reason spacemacs gets an corrupted value for
+  # Info-default-directory-list so I stop this from happening by explictly
+  # defining INFOPATH
+  export INFOPATH="/workarea/apaweuc1svm02/derek.graham/tools/miniconda/share/info:/usr/local/share/info:/usr/share/info"
+  
+  powerline-daemon -q
+  POWERLINE_BASH_CONTINUATION=1
+  POWERLINE_BASH_SELECT=1
+  POWERLINE_ROOT=/workarea/apaweuc1svm02/derek.graham/tools/miniconda/lib/python3.9/site-packages
+  . $POWERLINE_ROOT/powerline/bindings/bash/powerline.sh
+fi
+
+# Aliases put here to avoid having another file
+alias login_comp='ssh -X aeaweuc1comp03'
+alias login_sc37ut='ssh -X 10.111.15.1'
+alias login_sc37pd='ssh -X 10.111.15.2'
+alias goto_work='pushd /workarea/apaweuc1svm02/$USER'
