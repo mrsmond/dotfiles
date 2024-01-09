@@ -1,6 +1,8 @@
 # Common modulefiles
 source /tools/local/initscripts/bashrc
 
+export WORKSPACE=/project/apaweuc1svm02/ast5000/workarea/frontend/$USER
+
 # The vnc machine doesn't have access to /workarea, only the comp machines do
 if [ -e /workarea ]; then
   # >>> conda initialize >>>
