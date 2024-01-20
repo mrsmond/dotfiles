@@ -99,7 +99,3 @@ source $ZSH/oh-my-zsh.sh
 if [[ -f ~/.bash_aliases ]]; then
     . ~/.bash_aliases
 fi
-
-# This was needed for WSL2 on Windows 10
-#export DISPLAY=$(awk '/nameserver / {print $2; exit}' /etc/resolv.conf 2>/dev/null):0
-export LIBGL_ALWAYS_INDIRECT=1
