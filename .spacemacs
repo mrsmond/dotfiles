@@ -1350,86 +1350,6 @@ before packages are loaded."
     )
   )
 
-(defun dgraham/org-insert-log-entry (date &optional properties log-level)
-  "Insert a log entry for the given DATE at the heading level LOG-LEVEL.
-
-  PROPERTIES is a list of name value pairs that will be set a
-  properties in each heading."
-  (interactive)
-  (beginning-of-line)
-  (insert (make-string log-level ?*) " ")
-  (org-insert-time-stamp date nil t)
-  (newline)
-  (dolist (pv properties)
-    (org-set-property (car pv) (car (cdr pv)))
-    )
-  )
-
-;; Useful when filling out lots of missed log entries
-(defun dgraham/org-insert-log-entries (&optional start-date end-date properties log-level)
-  "Insert from START-DATE to END-DATE inclusive a log entry for each work day at the heading level LOG-LEVEL.
-
-   PROPERTIES is a list of name value pairs that will be set a
-   properties in each heading.
-
-   It will prompt for the start date, end date, and properties.
-
-   Use the prefix argument to change the heading level.
-
-   It will skip weekends."
-  (interactive
-   (list (org-read-date nil 'totime nil "Enter the start date: ")
-         (org-read-date nil 'totime nil "Enter the end date: ")
-         ;;TODO: Change read-string to a helm equivalent so I can easily find properties
-         (car (read-from-string (read-string "Properties to set ((name value) ... ): " nil nil "()")))
-         current-prefix-arg
-         ))
-  (let* ((start-date (or start-date (current-time)))
-         (end-date (or end-date start-date))
-         (days (time-to-number-of-days (time-subtract end-date start-date)))
-         (log-level (or log-level 4))
-         (day 0)
-         (date start-date)
-         (dow nil) ;; Day of the week. Sunday is 0 and Saturday is 6
-         (workday nil))
-    ;; The start and end dates are inclusive to use <=
-    (while (<= day days)
-      (setq dow (nth 6 (decode-time date)))
-      (setq workday (and (> dow 0) (< dow 6)))
-      (when workday
-        (dgraham/org-insert-log-entry date properties log-level)
-        )
-      ;; Proceed to the next day
-      (setq day (1+ day))
-      (setq date (time-add date (days-to-time 1)))
-      )
-    )
-  )
-
-;; Got tired of changing the time in the properties. Change this when
-;; my hours change
-(defun dgraham/org-insert-current-week-log ()
-  "Insert from the last Monday to the coming Friday a log entry
-for each work day using my current working hours."
-  (interactive)
-  (let* (
-         ;; Start date is today if today is Monday or the previous Monday
-         (start-date (if (= 1 (nth 6 (decode-time))) (current-time) (org-read-date nil 'totime "-Mon")))
-         (log-level 4)
-         (hours
-          '((("start_time" "9") ("end_time" "17:30"))  ;; Mon
-            (("start_time" "9") ("end_time" "17:30"))  ;; Tue
-            (("start_time" "9") ("end_time" "17:30"))  ;; Wed
-            (("start_time" "13") ("end_time" "17:30")) ;; Thu
-            (("start_time" "13") ("end_time" "17:30")) ;; Fri
-          ))
-         )
-    (dotimes (i (length hours))
-      (dgraham/org-insert-log-entry (time-add start-date (days-to-time i)) (nth i hours) log-level)
-      )
-    )
-  )
-
 (defun dgraham/perl-eval (beg end)
   "Run selected region as Perl code"
   (interactive "r")
@@ -1491,7 +1411,6 @@ for each work day using my current working hours."
           )
         )
   ) 
-
 
 ;; This is used in yasnippet org-roam-daily-entry
 (defun dgraham/format-decoded-time (time)
