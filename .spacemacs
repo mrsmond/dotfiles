@@ -992,7 +992,7 @@ dump."
         ;; When the file name is not absolute, Org assumes it is relative to org-directory
         (file ,(concat org-roam-directory "/personal/templates/project.org"))
         ;; The title will have Project added to the end so don't type it
-        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}_project.org")
+        :if-new (file "personal/%<%Y%m%d%H%M%S>-${slug}_project.org")
         )
        )
      )
