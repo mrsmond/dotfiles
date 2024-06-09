@@ -65,6 +65,10 @@ This function should only modify configuration layer settings."
      table-manipulation
      ;; bookmarks
      bm
+     ;; SLY is Common Lisp IDE, this is a spacemacs layer for it
+     ;; See https://github.com/programingship/common-lisp-sly
+     ;; I cloned that git repo into ~/.emacs.d/private
+     common-lisp-sly
      )
 
    ;; List of additional packages that will be installed without being wrapped
@@ -1325,6 +1329,8 @@ before packages are loaded."
 
   (setq calendar-intermonth-header
         (propertize "Wk" 'font-lock-face 'font-lock-preprocessor-face))
+
+  (setq inferior-lisp-program "/usr/bin/sbcl")
   )
 
 ;; Make sure that clicking on the X button of the window doesn't close
@@ -1533,13 +1539,64 @@ This function is called at the very end of Spacemacs initialization."
  '(helm-buffer-max-length nil)
  '(ispell-dictionary "en_GB")
  '(org-format-latex-options
-   '(:foreground default :background default :scale 1.2 :html-foreground "Black" :html-background "Transparent" :html-scale 1.0 :matchers
+   '(:foreground default :background default :scale 1.2 :html-foreground "Black"
+                 :html-background "Transparent" :html-scale 1.0 :matchers
                  ("begin" "$1" "$" "$$" "\\(" "\\[")))
  '(org-transclusion-exclude-elements '(property-drawer keyword))
  '(org-transclusion-extensions
-   '(org-transclusion-src-lines org-transclusion-font-lock org-transclusion-indent-mode))
+   '(org-transclusion-src-lines org-transclusion-font-lock
+                                org-transclusion-indent-mode))
  '(package-selected-packages
-   '(bm org-modern evil-evilified-state holy-mode use-package magit-popup vulpea ac-ispell ace-jump-helm-line ace-link aggressive-indent auto-compile auto-complete auto-dictionary auto-highlight-symbol auto-yasnippet blacken browse-at-remote centered-cursor-mode clean-aindent-mode code-cells column-enforce-mode company-anaconda anaconda-mode cython-mode define-word devdocs dired-quick-sort drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args evil-cleverparens paredit evil-collection annalist evil-easymotion evil-escape evil-exchange evil-goggles evil-iedit-state iedit evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa flycheck-package package-lint flycheck flyspell-correct-helm flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter git-link git-messenger git-modes git-timemachine gitignore-templates gnuplot golden-ratio google-translate helm-ag helm-c-yasnippet helm-company company helm-descbinds helm-git-grep helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop helm-themes helm-xref helm helm-core help-fns+ highlight-indentation highlight-numbers parent-mode highlight-parentheses hl-todo htmlize hungry-delete importmagic epc ctable concurrent deferred indent-guide inspector link-hint live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up nameless open-junk-file org-cliplink org-contrib org-download org-mime org-noter org-pomodoro alert log4e gntp org-present org-projectile org-category-capture org-rich-yank org-superstar orgit-forge orgit forge yaml markdown-mode ghub closql treepy overseer pkg-info epl paradox spinner password-generator pdf-view-restore pdf-tools tablist pip-requirements pipenv load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode pythonic pylookup pytest pyvenv quickrun rainbow-delimiters rainbow-mode request restart-emacs smartparens smeargle space-doc spaceline-all-the-icons memoize spaceline all-the-icons powerline spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc string-edit-at-point string-inflection symbol-overlay symon term-cursor toc-org treemacs-evil treemacs-icons-dired treemacs-magit magit git-commit with-editor transient compat treemacs-persp persp-mode treemacs-projectile treemacs projectile cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep window-purpose imenu-list winum writeroom-mode visual-fill-column ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async bind-map diminish dotenv-mode lv pcre2el bind-key which-key emacsql-sqlite org-roam org-transclusion org-ql nose helm-org-ql helm-bibtex org string-edit info+ hybrid-mode hide-comnt font-lock+ evil-unimpaired evil-ediff))
+   '(helm-sly common-lisp-snippets sly-macrostep sly-repl-ansi-color sly bm
+              org-modern evil-evilified-state holy-mode use-package magit-popup
+              vulpea ac-ispell ace-jump-helm-line ace-link aggressive-indent
+              auto-compile auto-complete auto-dictionary auto-highlight-symbol
+              auto-yasnippet blacken browse-at-remote centered-cursor-mode
+              clean-aindent-mode code-cells column-enforce-mode company-anaconda
+              anaconda-mode cython-mode define-word devdocs dired-quick-sort
+              drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr
+              clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args
+              evil-cleverparens paredit evil-collection annalist evil-easymotion
+              evil-escape evil-exchange evil-goggles evil-iedit-state iedit
+              evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc
+              evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround
+              evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar
+              expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa
+              flycheck-package package-lint flycheck flyspell-correct-helm
+              flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter
+              git-link git-messenger git-modes git-timemachine
+              gitignore-templates gnuplot golden-ratio google-translate helm-ag
+              helm-c-yasnippet helm-company company helm-descbinds helm-git-grep
+              helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle
+              helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop
+              helm-themes helm-xref helm helm-core help-fns+
+              highlight-indentation highlight-numbers parent-mode
+              highlight-parentheses hl-todo htmlize hungry-delete importmagic
+              epc ctable concurrent deferred indent-guide inspector link-hint
+              live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up
+              nameless open-junk-file org-cliplink org-contrib org-download
+              org-mime org-noter org-pomodoro alert log4e gntp org-present
+              org-projectile org-category-capture org-rich-yank org-superstar
+              orgit-forge orgit forge yaml markdown-mode ghub closql treepy
+              overseer pkg-info epl paradox spinner password-generator
+              pdf-view-restore pdf-tools tablist pip-requirements pipenv
+              load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode
+              pythonic pylookup pytest pyvenv quickrun rainbow-delimiters
+              rainbow-mode request restart-emacs smartparens smeargle space-doc
+              spaceline-all-the-icons memoize spaceline all-the-icons powerline
+              spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc
+              string-edit-at-point string-inflection symbol-overlay symon
+              term-cursor toc-org treemacs-evil treemacs-icons-dired
+              treemacs-magit magit git-commit with-editor transient compat
+              treemacs-persp persp-mode treemacs-projectile treemacs projectile
+              cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen
+              vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep
+              window-purpose imenu-list winum writeroom-mode visual-fill-column
+              ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async
+              bind-map diminish dotenv-mode lv pcre2el bind-key which-key
+              emacsql-sqlite org-roam org-transclusion org-ql nose helm-org-ql
+              helm-bibtex org string-edit info+ hybrid-mode hide-comnt
+              font-lock+ evil-unimpaired evil-ediff))
  '(verilog-indent-level 2)
  '(verilog-indent-level-behavioral 2)
  '(verilog-indent-level-declaration 2)
