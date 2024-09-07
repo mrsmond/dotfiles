@@ -75,21 +75,9 @@ plugins=(git)
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
-
-# export MANPATH="/usr/local/man:$MANPATH"
-
-# You may need to manually set your language environment
-# export LANG=en_US.UTF-8
-
-# Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='mvim'
-# fi
-
-# Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+if [ -f ~/.bash_exports ]; then
+    . ~/.bash_exports
+fi
 
 # oh-my-zsh recommends putting custom aliases in the ZSH_CUSTOM folder, but this
 # is inside the ~/.oh-my-zsh folder which is already inside a git checkout and

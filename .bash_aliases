@@ -6,6 +6,8 @@ alias hi=history
 alias d='dirs -v | alc'
 alias u=pushd
 alias o=popd
+alias e=emacsclient
+alias ec='emacsclient -c -a emacs'
 
 # Bash aliases can't take arguments, use a function
 hig() {
