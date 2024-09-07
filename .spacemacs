@@ -27,7 +27,7 @@ This function should only modify configuration layer settings."
    dotspacemacs-ask-for-lazy-installation t
 
    ;; List of additional paths where to look for configuration layers.
-   ;; Paths must have a trailing slash (i.e. `~/.mycontribs/')
+   ;; Paths must have a trailing slash (i.e. "~/.mycontribs/")
    dotspacemacs-configuration-layer-path '()
 
    ;; List of configuration layers to load.
@@ -44,8 +44,6 @@ This function should only modify configuration layer settings."
                  evil-snipe-enable-alternate-f-and-t-behaviors t)
      git
      helm
-     ;; lsp
-     ;; markdown
      multiple-cursors
      (org :variables
           ;; See https://github.com/Somelauw/evil-org-mode/blob/master/doc/keythemes.org
@@ -57,12 +55,7 @@ This function should only modify configuration layer settings."
           org-enable-transclusion-support t
           )
      spell-checking
-     ;; syntax-checking
      version-control
-     pdf
-     python
-     ;; in ~/.emacs.d/private
-     table-manipulation
      ;; bookmarks
      bm
      )
@@ -78,7 +71,6 @@ This function should only modify configuration layer settings."
    dotspacemacs-additional-packages '(
                                       helm-org-rifle
                                       helm-org
-                                      helm-rg
                                       org-super-agenda
                                       rainbow-mode
                                       wgrep-helm
@@ -279,7 +271,9 @@ It should only modify the values of Spacemacs settings."
    ;; (default t)
    dotspacemacs-colorize-cursor-according-to-state t
 
-   ;; Default font or prioritized list of fonts. The `:size' can be specified as
+   ;; Default font or prioritized list of fonts. This setting has no effect when
+   ;; running Emacs in terminal. The font set here will be used for default and
+   ;; fixed-pitch faces. The `:size' can be specified as
    ;; a non-negative integer (pixel size), or a floating-point (point size).
    ;; Point size is recommended, because it's device independent. (default 10.0)
    dotspacemacs-default-font '("Hack"
@@ -361,6 +355,10 @@ It should only modify the values of Spacemacs settings."
    ;; Which-key frame position. Possible values are `right', `bottom' and
    ;; `right-then-bottom'. right-then-bottom tries to display the frame to the
    ;; right; if there is insufficient space it displays it at the bottom.
+   ;; It is also possible to use a posframe with the following cons cell
+   ;; `(posframe . position)' where position can be one of `center',
+   ;; `top-center', `bottom-center', `top-left-corner', `top-right-corner',
+   ;; `top-right-corner', `bottom-left-corner' or `bottom-right-corner'
    ;; (default 'bottom)
    dotspacemacs-which-key-position 'bottom
 
@@ -578,8 +576,47 @@ This function is called immediately after `dotspacemacs/init', before layer
 configuration.
 It is mostly for variables that should be set before packages are loaded.
 If you are unsure, try setting them in `dotspacemacs/user-config' first."
-  ;; Bug in latest version of f and emacs29: this is required to avoid an error about undefined define-short-documentation-group
-  (require 'shortdoc)
+  ;; Limit the number of async processes to avoid emacs on Windows causing an
+  ;; error about "too many pipe", which happens when installing packages and
+  ;; compiling them
+  ;; From: https://web.archive.org/web/20220928200259/https://ddavis.io/posts/emacs-native-centos7/#deferred-and-asynchronous-compilation
+  (setq native-comp-deferred-compilation t)
+  (setq native-comp-async-query-on-exit t)
+  (setq native-comp-async-jobs-number 4)
+  (setq native-comp-async-report-warnings-errors nil)
+
+  ;; From: https://gist.github.com/kiennq/cfe57671bab3300d3ed849a7cbf2927c
+  (use-package async
+    :ensure t
+    :defer 5
+    :init
+    (setq async-bytecomp-allowed-packages '(all))
+    :config
+    ;; async compiling package
+    (async-bytecomp-package-mode t)
+    (dired-async-mode 1)
+    ;; limit number of async processes
+    (eval-when-compile
+      (require 'cl-lib))
+    (defvar async-maximum-parallel-procs 4)
+    (defvar async--parallel-procs 0)
+    (defvar async--queue nil)
+    (defvar-local async--cb nil)
+    (advice-add #'async-start :around
+                (lambda (orig-func func &optional callback)
+                  (if (>= async--parallel-procs async-maximum-parallel-procs)
+                      (push `(,func ,callback) async--queue)
+                    (cl-incf async--parallel-procs)
+                    (let ((future (funcall orig-func func
+                                           (lambda (re)
+                                             (cl-decf async--parallel-procs)
+                                             (when async--cb (funcall async--cb re))
+                                             (when-let (args (pop async--queue))
+                                               (apply #'async-start args))))))
+                      (with-current-buffer (process-buffer future)
+                        (setq async--cb callback)))))
+                '((name . --queue-dispatch)))
+    ) 
 )
 
 
@@ -605,9 +642,12 @@ dump."
   ;;;   (setq org-agenda-files
   ;;;         (find-lisp-find-files "~/Dropbox/GTD/ActiveProjects" "\.org$"))
   ;;;   ))
-  (setq org-directory (expand-file-name "~/owncloud/org"))
+  (setq org-directory (expand-file-name (f-join (getenv "USERPROFILE") "ownCloud/org")))
   ;; used before use-package's custom property
   (setq org-roam-directory (f-join org-directory "roam"))
+  ;; put here because dgraham/org-roam-is-daily uses it and causes an error when
+  ;; finding a node before loading org-roam-dailies
+  (setq org-roam-dailies-directory (f-join org-roam-directory "journal"))
   ;; Put here to avoid org-roam from picking up template files as they have ID properties
   (setq dgraham/org-template-directory (f-join org-directory "templates"))
   (setq org-default-notes-file (f-join org-directory "inbox.org"))
@@ -967,7 +1007,6 @@ dump."
      )
     :custom
     ;; setq shouldn't be use as some of these variables might have custom setter
-    (org-roam-dailies-directory (f-join org-roam-directory "journal"))
     (org-roam-completion-everywhere t)
     (org-roam-node-display-template 
      (concat "${title:*} ${description:*}"
@@ -1329,9 +1368,12 @@ before packages are loaded."
 
   ;; I use rg instead of ag now, but I don't think this is required as it's for
   ;; the helm-ag package
-  (setq helm-ag-base-command "rg --line-number --no-heading --smart-case --color=always --hidden --follow %s %s %s")
+  ;;(setq helm-ag-base-command "rg --no-heading --line-number --color never")
+  ;;(setq helm-ag-base-command "rg --line-number --no-heading --smart-case --color=always --hidden --follow %s %s %s")
   ;; This is what helm uses from the AG command when finding files
-  (setq helm-grep-ag-command "rg --line-number --no-heading --smart-case --color=always --hidden --follow %s %s %s")
+  ;;(setq helm-grep-ag-command "rg --line-number --no-heading --smart-case --color=always --hidden --follow %s %s %s")
+  ;;(setq helm-ag-success-exit-status '(0 2))
+  ;;(setq helm-ag-base-command "pt -e --nocolor --nogroup")
 
   (dgraham/load-pss-mode)
 
@@ -1370,6 +1412,21 @@ before packages are loaded."
   ;; This interrupts me when I'm in a elisp debugging session
   ;;(add-hook 'window-size-change-functions (lambda (frame) (dgraham/adjust-font-size-based-on-display)))
   ;;(add-hook 'after-focus-change-function #'dgraham/adjust-font-size-based-on-display)
+
+  ;; hunspell was installed via chocolatey. I downloaded the en_GB dictionaries
+  ;; from https://cgit.freedesktop.org/libreoffice/dictionaries/plain/en/ and
+  ;; put them in %USERPROFILE%/hunspell. I then set the WINDOWS environment
+  ;; variable DICPATH to that directory. In a Windows PowerShell, do
+  ;; hunspell.exe -D spelltest.txt to show that the SEARCH PATH has been
+  ;; modified and that the en_GB dictionaries are loaded (you have to give a
+  ;; file to see that bit). I set the environment variable LANG to en_GB.
+  ;;
+  ;; No need to set ispell-program-name or ispell-dictionary. However, there's a
+  ;; bug in ispell.el when parsing the output of hunspell, the path to the .aff
+  ;; file has single backslashes as file path separators, which is file on
+  ;; Windows but elisp interprets that as string escaping so let's define it
+  ;; ourselves. Note I've used forward slashes, which works.
+  (setq ispell-hunspell-dict-paths-alist '(("en_GB" "C:/Users/derek.graham/hunspell/en_GB.aff")))
   )
 
 ;; Make sure that clicking on the X button of the window doesn't close
@@ -1433,7 +1490,7 @@ before packages are loaded."
       ;; Name of source 
       "Meetings"
       ;; The file where to get the strings, one per line
-      (expand-file-name "~/owncloud/org/ast/meeting_headlines.txt")
+      (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
       ;; What to do with the selected candidate(s)
       :action (helm-make-actions "Insert" (lambda (candidate) (insert candidate)))
       )
@@ -1450,7 +1507,7 @@ before packages are loaded."
             ;; Name of source 
             "Meetings"
             ;; The file where to get the strings, one per line
-            (expand-file-name "~/owncloud/org/ast/meeting_headlines.txt")
+            (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
           ;; What to do with the selected candidate(s)
           :action (helm-make-actions "Select" (lambda (candidate) (concat "" candidate)))
           )
@@ -1630,7 +1687,7 @@ This function is called at the very end of Spacemacs initialization."
  '(org-transclusion-extensions
    '(org-transclusion-src-lines org-transclusion-font-lock org-transclusion-indent-mode))
  '(package-selected-packages
-   '(gnu-elpa-keyring-update bm org-modern evil-evilified-state holy-mode use-package magit-popup vulpea ac-ispell ace-jump-helm-line ace-link aggressive-indent auto-compile auto-complete auto-dictionary auto-highlight-symbol auto-yasnippet blacken browse-at-remote centered-cursor-mode clean-aindent-mode code-cells column-enforce-mode company-anaconda anaconda-mode cython-mode define-word devdocs dired-quick-sort drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args evil-cleverparens paredit evil-collection annalist evil-easymotion evil-escape evil-exchange evil-goggles evil-iedit-state iedit evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa flycheck-package package-lint flycheck flyspell-correct-helm flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter git-link git-messenger git-modes git-timemachine gitignore-templates gnuplot golden-ratio google-translate helm-ag helm-c-yasnippet helm-company company helm-git-grep helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop helm-themes helm-xref helm helm-core help-fns+ highlight-indentation highlight-numbers parent-mode highlight-parentheses hl-todo htmlize hungry-delete importmagic epc ctable concurrent deferred indent-guide inspector link-hint live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up nameless open-junk-file org-cliplink org-contrib org-download org-mime org-noter org-pomodoro alert log4e gntp org-present org-projectile org-category-capture org-rich-yank org-superstar orgit-forge orgit forge yaml markdown-mode ghub closql treepy overseer pkg-info epl paradox spinner password-generator pdf-view-restore pdf-tools tablist pip-requirements pipenv load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode pythonic pylookup pytest pyvenv quickrun rainbow-delimiters rainbow-mode request restart-emacs smartparens smeargle space-doc spaceline-all-the-icons memoize spaceline all-the-icons powerline spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc string-edit-at-point string-inflection symbol-overlay symon term-cursor toc-org treemacs-evil treemacs-icons-dired treemacs-magit magit git-commit with-editor transient treemacs-persp persp-mode treemacs-projectile treemacs projectile cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep window-purpose imenu-list winum writeroom-mode visual-fill-column ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async bind-map diminish dotenv-mode lv pcre2el bind-key which-key emacsql-sqlite org-roam org-transclusion org-ql nose helm-org-ql helm-bibtex string-edit info+ hybrid-mode hide-comnt font-lock+ evil-unimpaired evil-ediff))
+   '(rg zenburn-theme yasnippet-snippets ws-butler writeroom-mode winum which-key wgrep-helm vulpea volatile-highlights vim-powerline vi-tilde-fringe uuidgen undo-tree treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil toc-org term-cursor symon symbol-overlay string-inflection string-edit-at-point spacemacs-whitespace-cleanup spacemacs-purpose-popwin spaceline space-doc smeargle restart-emacs request rainbow-mode rainbow-delimiters quickrun popwin pcre2el password-generator paradox overseer orgit org-transclusion org-superstar org-rich-yank org-ql org-projectile org-present org-pomodoro org-noter org-mime org-download org-contrib org-cliplink open-junk-file nameless multi-line math-preview macrostep lorem-ipsum link-hint inspector info+ indent-guide hybrid-mode hungry-delete htmlize holy-mode hl-todo highlight-parentheses highlight-numbers highlight-indentation hide-comnt helm-xref helm-themes helm-swoop helm-purpose helm-projectile helm-org-rifle helm-org helm-mode-manager helm-make helm-ls-git helm-git-grep helm-descbinds helm-company helm-comint helm-c-yasnippet helm-ag google-translate golden-ratio gnuplot gitignore-templates git-timemachine git-modes git-messenger git-link flyspell-correct-helm flycheck-package flycheck-elsa flx-ido fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-textobj-line evil-surround evil-snipe evil-org evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-evilified-state evil-escape evil-easymotion evil-collection evil-cleverparens evil-args evil-anzu eval-sexp-fu emr elisp-slime-nav elisp-demos elisp-def editorconfig dumb-jump drag-stuff dotenv-mode dired-quick-sort diminish diff-hl devdocs define-word column-enforce-mode clean-aindent-mode centered-cursor-mode browse-at-remote bm auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile all-the-icons aggressive-indent ace-link ace-jump-helm-line))
  '(verilog-indent-level 2)
  '(verilog-indent-level-behavioral 2)
  '(verilog-indent-level-declaration 2)
