@@ -1,6 +1,19 @@
+# Reload this with the command C-x C-r
 $if Bash
   Space: magic-space
   set colored-stats on
+
+  # Up arrow cycles backword through matching history
   "\e[A": history-search-backward
+
+  # Down arrow cycles forward through matching history
   "\e[B": history-search-forward
+
+  # Kill the word behind point, using white space and the slash character as the
+  # word boundaries. The killed text is saved on the kill-ring.
+  "\C-h": unix-filename-rubout
+
+  # For Bash version >4.4, when completing (e.g. filenames) this will display
+  # the prefix in a different colour
+  colored-completion-prefix: on
 $endif
