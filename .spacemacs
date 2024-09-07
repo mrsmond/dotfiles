@@ -44,8 +44,6 @@ This function should only modify configuration layer settings."
                  evil-snipe-enable-alternate-f-and-t-behaviors t)
      git
      helm
-     ;; lsp
-     ;; markdown
      multiple-cursors
      (org :variables
           ;; See https://github.com/Somelauw/evil-org-mode/blob/master/doc/keythemes.org
@@ -57,7 +55,6 @@ This function should only modify configuration layer settings."
           org-enable-transclusion-support t
           )
      spell-checking
-     ;; syntax-checking
      version-control
      pdf
      python
@@ -610,10 +607,17 @@ dump."
   ;;;         (find-lisp-find-files "~/Dropbox/GTD/ActiveProjects" "\.org$"))
   ;;;   ))
   (setq org-directory (expand-file-name "~/owncloud/org"))
-  (setq org-default-notes-file (concat org-directory "/inbox.org"))
+  ;; used before use-package's custom property
+  (setq org-roam-directory (f-join org-directory "roam"))
+  ;; put here because dgraham/org-roam-is-daily uses it and causes an error when
+  ;; finding a node before loading org-roam-dailies
+  (setq org-roam-dailies-directory (f-join org-roam-directory "journal"))
+  ;; Put here to avoid org-roam from picking up template files as they have ID properties
+  (setq dgraham/org-template-directory (f-join org-directory "templates"))
+  (setq org-default-notes-file (f-join org-directory "inbox.org"))
 
   ;; I use a hook to add files here that contain TODOs
-  (setq org-agenda-files (list "~/owncloud/org/ast"))
+  (setq org-agenda-files (list (f-join org-directory "ast")))
 
   ;; Define this here for consistency across files
   (setq org-todo-keywords
@@ -676,18 +680,44 @@ dump."
   (setq org-use-sub-superscripts '{})
   (setq org-export-with-sub-superscripts '{})
 
-  (setq org-capture-templates '(
-                                ("t" "Todo [inbox]" entry
-                                 ;; inbox gets used as a bucket so don't put it under Tasks like work.org
-                                 (file "~/owncloud/org/inbox.org")
-                                 "* TODO %?\n:LOGBOOK:\n- State \"TODO\"       from            %U\n:END:\nCreated from %a.")
-                                ("w" "Todo [work]" entry
-                                 (file+headline "~/owncloud/org/ast/work.org" "One-Off Tasks")
-                                 "* TODO %?\n:LOGBOOK:\n- State \"TODO\"       from            %U\n:END:\nCreated from %a.")
-                                ("a" "Acronym" entry
-                                 (file+headline "~/owncloud/org/roam/ast/20220317161021-glossary.org" "Acronyms")
-                                 "* %^{Acronym}\n:PROPERTIES:\n:ID: %(org-id-new)\n:DESCRIPTION: %^{Description}\n:END:\n%?")
-                                )
+  (setq org-capture-templates
+        ;; Note the backtick so I cat use functions in constructing the list
+        `(
+          ("t" "Todo [inbox]" entry
+           ;; inbox gets used as a bucket so don't put it under Tasks like work.org
+           (file ,(concat org-directory "/inbox.org"))
+           "* TODO %?\n:LOGBOOK:\n- State \"TODO\"       from            %U\n:END:\nCreated from %a.")
+          ("w" "Todo [work]" entry
+           (file+headline ,(concat org-directory "/ast/work.org") "One-Off Tasks")
+           "* TODO %?\n:LOGBOOK:\n- State \"TODO\"       from            %U\n:END:\nCreated from %a.")
+          ("a" "Acronym" entry
+           (file+headline ,(concat org-roam-directory "/ast/20220317161021-glossary.org") "Acronyms")
+           "* %^{Acronym}\n:PROPERTIES:\n:ID: %(org-id-new)\n:DESCRIPTION: %^{Description}\n:END:\n%?")
+          ;; Reviews are here, not in org-roam capture
+          ;; templates because I can't get :time-prompt to
+          ;; work
+
+          ;; Reviews are under a different category for two reasons:
+          ;;   1. Although they are work based now, they should be for everything
+          ;;   2. Leads to a nicer grouping of weekly, monthly, and yearly
+          ("r" "Reviews")
+          ("rw" "Weekly review" plain
+           ; target
+           ;; Make sure you manually create the folder with the year
+           (file dgraham/org-capture-target-for-weekly-review)
+
+           ; template
+           (file ,(concat dgraham/org-template-directory "/reviews/weekly_review.org"))
+          )
+          ;;("rm" "Monthly review" plain
+           ;; target
+           ;; template
+           ;;(file ,(concat dgraham/org-template-directory "/reviews/monthly_review.org"))
+                                        ; )
+          ;;("ry" "Yearly review" plain
+          ;;(file ,(concat dgraham/org-template-directory "/reviews/yearly_review.org"))
+          ;; )
+          )
         )
 
   ;; When I add a TODO I want this recorded with a time stamp as then I know
@@ -925,7 +955,7 @@ dump."
                     (when (org-up-heading-safe) (org-get-heading 'notags 'notodo))
                   ;; new project in an org-roam node
                   (car (cdr (car (org-collect-keywords '("TITLE")))))
-                )))
+                ))) 
   ;; org-roam setup
   ;; I've done it using use-package because calling org-roam-db-autosync-mode
   ;; needs org-roam loaded first
@@ -941,8 +971,6 @@ dump."
      )
     :custom
     ;; setq shouldn't be use as some of these variables might have custom setter
-    (org-roam-directory (concat org-directory "/roam"))
-    (org-roam-dailies-directory "journal/")
     (org-roam-completion-everywhere t)
     (org-roam-node-display-template 
      (concat "${title:*} ${description:*}"
@@ -957,14 +985,14 @@ dump."
        ;; Copied from the default value, added category to make it look nicer in
        ;; the agenda view
        ("wn" "Work note" plain
-        "%?"
-        :target (file+head "ast/%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n#+category: work\n#+FILETAGS: ast\n")
-        :unnarrowed t
+        ;; When the file name is not absolute, Org assumes it is relative to org-directory
+        (file ,(concat dgraham/org-template-directory "/ast/note.org"))
+        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}.org")
         )
        ;;TODO: This adds an extra property drawer with ID so requires manual edit
        ("wi" "Work interview" plain
         ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat org-roam-directory "/ast/templates/interview.org"))
+        (file ,(concat dgraham/org-template-directory "/ast/interview.org"))
         ;; Just type the person's name and "Interview of" will be added in the right place
         :if-new (file "ast/%<%Y%m%d%H%M%S>-interview_of_${slug}.org")
         )
@@ -981,9 +1009,15 @@ dump."
         )
        ("wj" "Work project" plain
         ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat org-roam-directory "/ast/templates/project.org"))
+        (file ,(concat dgraham/org-template-directory "/ast/project.org"))
         ;; The title will have Project added to the end so don't type it
         :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}_project.org")
+        )
+       ("wa" "Work Area of Responsibility" plain
+        ;; When the file name is not absolute, Org assumes it is relative to org-directory
+        (file ,(concat dgraham/org-template-directory "/ast/aor.org"))
+        ;; The title will have AoR added to the end so don't type it
+        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}_aor.org")
         )
        ;; All the following nodes will go in the personal directory, relative to org-roam-directory 
        ("p" "Personal")
@@ -994,10 +1028,14 @@ dump."
         )
        ("pj" "Personal project" plain
         ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat org-roam-directory "/personal/templates/project.org"))
+        (file ,(concat dgraham/org-template-directory "/personal/project.org"))
         ;; The title will have Project added to the end so don't type it
-        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}_project.org")
+        :if-new (file "personal/%<%Y%m%d%H%M%S>-${slug}_project.org")
         )
+       ;; Reviews are not here because this roam template variable doesn't
+       ;; support using a function to defined the name of the node, which is
+       ;; needed to set the date at which the review is for as that might not be
+       ;; the current date
        )
      )
     (org-roam-dailies-capture-templates
@@ -1329,8 +1367,14 @@ before packages are loaded."
 
   (setq calendar-intermonth-header
         (propertize "Wk" 'font-lock-face 'font-lock-preprocessor-face))
-
+  
   (setq inferior-lisp-program "/usr/bin/sbcl")
+
+  ;; This will automatically change font size depending on which monitor emacs
+  ;; is on
+  ;; This interrupts me when I'm in a elisp debugging session
+  ;;(add-hook 'window-size-change-functions (lambda (frame) (dgraham/adjust-font-size-based-on-display)))
+  ;;(add-hook 'after-focus-change-function #'dgraham/adjust-font-size-based-on-display)
   )
 
 ;; Make sure that clicking on the X button of the window doesn't close
@@ -1394,7 +1438,7 @@ before packages are loaded."
       ;; Name of source 
       "Meetings"
       ;; The file where to get the strings, one per line
-      (expand-file-name "~/owncloud/org/ast/meeting_headlines.txt")
+      (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
       ;; What to do with the selected candidate(s)
       :action (helm-make-actions "Insert" (lambda (candidate) (insert candidate)))
       )
@@ -1411,7 +1455,7 @@ before packages are loaded."
             ;; Name of source 
             "Meetings"
             ;; The file where to get the strings, one per line
-            (expand-file-name "~/owncloud/org/ast/meeting_headlines.txt")
+            (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
           ;; What to do with the selected candidate(s)
           :action (helm-make-actions "Select" (lambda (candidate) (concat "" candidate)))
           )
@@ -1523,6 +1567,51 @@ ensure it is excluded by org-roam"
   (concat "id:"
           (org-id-get-with-outline-path-completion)))
 
+;; See https://emacs.stackexchange.com/questions/60690/change-font-size-globally-with-a-shortcut
+;; focus-in-hook is obsolete, so I changed it
+(defun dgraham/change-font-size (new-size)
+  "Change the font size to the given value"
+  (interactive "nNew font size: ")
+  (set-face-attribute 'default nil :height (* 10 new-size))
+  )
+
+(defun dgraham/adjust-font-size-based-on-display ()
+  (interactive)
+  (let ((display-width (nth 3 (assq 'geometry (frame-monitor-attributes))))
+        )
+    (dgraham/change-font-size
+     (cond ((<= display-width 1920) 12) ;; = Work laptop
+           ((<= display-width 2560) 12) ;; UWHD
+           ((<= display-width 4096) 10) ;; = my and work monitor
+           )
+     )
+    )
+  )
+
+;; Used in org-capture template
+;; E.g. (dgraham/format-string-from-prompt "%G-W%V")
+(defun dgraham/format-time-string-from-prompt (string)
+  "Pass a string that format-string understands but based upon the
+date the user provides."
+  (format-time-string string (org-read-date nil 'totime nil "Review date: "))
+  )
+
+(defun dgraham/org-capture-target-for-weekly-review ()
+  (let* (
+         (review-date (org-read-date nil 'totime nil "Review date: "))
+         ;; %G is the ISO week year as there can be some seemingly odd
+         ;; situations where the ISO week number doesn't match the Gregorian
+         ;; date.
+         (review-date-string (format-time-string "/reviews/%G/%G-W%V-weekly_review.org" review-date))
+         )
+    ;; time-prompt isn't recognised and neither is C-1 to org-capture, looking
+    ;; at the source code, it uses this, but doesn't work either. However, I use
+    ;; it in the template file to get the review date not the current date.
+    (setq org-overriding-default-time review-date)
+    (concat org-roam-directory review-date-string)
+    )
+  )
+
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
 (defun dotspacemacs/emacs-custom-settings ()
@@ -1537,66 +1626,16 @@ This function is called at the very end of Spacemacs initialization."
  ;; If there is more than one, they won't work right.
  '(evil-want-Y-yank-to-eol nil)
  '(helm-buffer-max-length nil)
+ '(helm-descbinds-disable-which-key nil)
  '(ispell-dictionary "en_GB")
  '(org-format-latex-options
-   '(:foreground default :background default :scale 1.2 :html-foreground "Black"
-                 :html-background "Transparent" :html-scale 1.0 :matchers
+   '(:foreground default :background default :scale 1.2 :html-foreground "Black" :html-background "Transparent" :html-scale 1.0 :matchers
                  ("begin" "$1" "$" "$$" "\\(" "\\[")))
  '(org-transclusion-exclude-elements '(property-drawer keyword))
  '(org-transclusion-extensions
-   '(org-transclusion-src-lines org-transclusion-font-lock
-                                org-transclusion-indent-mode))
+   '(org-transclusion-src-lines org-transclusion-font-lock org-transclusion-indent-mode))
  '(package-selected-packages
-   '(helm-sly common-lisp-snippets sly-macrostep sly-repl-ansi-color sly bm
-              org-modern evil-evilified-state holy-mode use-package magit-popup
-              vulpea ac-ispell ace-jump-helm-line ace-link aggressive-indent
-              auto-compile auto-complete auto-dictionary auto-highlight-symbol
-              auto-yasnippet blacken browse-at-remote centered-cursor-mode
-              clean-aindent-mode code-cells column-enforce-mode company-anaconda
-              anaconda-mode cython-mode define-word devdocs dired-quick-sort
-              drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr
-              clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args
-              evil-cleverparens paredit evil-collection annalist evil-easymotion
-              evil-escape evil-exchange evil-goggles evil-iedit-state iedit
-              evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc
-              evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround
-              evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar
-              expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa
-              flycheck-package package-lint flycheck flyspell-correct-helm
-              flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter
-              git-link git-messenger git-modes git-timemachine
-              gitignore-templates gnuplot golden-ratio google-translate helm-ag
-              helm-c-yasnippet helm-company company helm-descbinds helm-git-grep
-              helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle
-              helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop
-              helm-themes helm-xref helm helm-core help-fns+
-              highlight-indentation highlight-numbers parent-mode
-              highlight-parentheses hl-todo htmlize hungry-delete importmagic
-              epc ctable concurrent deferred indent-guide inspector link-hint
-              live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up
-              nameless open-junk-file org-cliplink org-contrib org-download
-              org-mime org-noter org-pomodoro alert log4e gntp org-present
-              org-projectile org-category-capture org-rich-yank org-superstar
-              orgit-forge orgit forge yaml markdown-mode ghub closql treepy
-              overseer pkg-info epl paradox spinner password-generator
-              pdf-view-restore pdf-tools tablist pip-requirements pipenv
-              load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode
-              pythonic pylookup pytest pyvenv quickrun rainbow-delimiters
-              rainbow-mode request restart-emacs smartparens smeargle space-doc
-              spaceline-all-the-icons memoize spaceline all-the-icons powerline
-              spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc
-              string-edit-at-point string-inflection symbol-overlay symon
-              term-cursor toc-org treemacs-evil treemacs-icons-dired
-              treemacs-magit magit git-commit with-editor transient compat
-              treemacs-persp persp-mode treemacs-projectile treemacs projectile
-              cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen
-              vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep
-              window-purpose imenu-list winum writeroom-mode visual-fill-column
-              ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async
-              bind-map diminish dotenv-mode lv pcre2el bind-key which-key
-              emacsql-sqlite org-roam org-transclusion org-ql nose helm-org-ql
-              helm-bibtex org string-edit info+ hybrid-mode hide-comnt
-              font-lock+ evil-unimpaired evil-ediff))
+   '(helm-sly common-lisp-snippets sly-macrostep sly-repl-ansi-color sly gnu-elpa-keyring-update bm org-modern evil-evilified-state holy-mode use-package magit-popup vulpea ac-ispell ace-jump-helm-line ace-link aggressive-indent auto-compile auto-complete auto-dictionary auto-highlight-symbol auto-yasnippet blacken browse-at-remote centered-cursor-mode clean-aindent-mode code-cells column-enforce-mode company-anaconda anaconda-mode cython-mode define-word devdocs dired-quick-sort drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args evil-cleverparens paredit evil-collection annalist evil-easymotion evil-escape evil-exchange evil-goggles evil-iedit-state iedit evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa flycheck-package package-lint flycheck flyspell-correct-helm flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter git-link git-messenger git-modes git-timemachine gitignore-templates gnuplot golden-ratio google-translate helm-ag helm-c-yasnippet helm-company company helm-descbinds helm-git-grep helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop helm-themes helm-xref helm helm-core help-fns+ highlight-indentation highlight-numbers parent-mode highlight-parentheses hl-todo htmlize hungry-delete importmagic epc ctable concurrent deferred indent-guide inspector link-hint live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up nameless open-junk-file org-cliplink org-contrib org-download org-mime org-noter org-pomodoro alert log4e gntp org-present org-projectile org-category-capture org-rich-yank org-superstar orgit-forge orgit forge yaml markdown-mode ghub closql treepy overseer pkg-info epl paradox spinner password-generator pdf-view-restore pdf-tools tablist pip-requirements pipenv load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode pythonic pylookup pytest pyvenv quickrun rainbow-delimiters rainbow-mode request restart-emacs smartparens smeargle space-doc spaceline-all-the-icons memoize spaceline all-the-icons powerline spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc string-edit-at-point string-inflection symbol-overlay symon term-cursor toc-org treemacs-evil treemacs-icons-dired treemacs-magit magit git-commit with-editor transient compat treemacs-persp persp-mode treemacs-projectile treemacs projectile cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep window-purpose imenu-list winum writeroom-mode visual-fill-column ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async bind-map diminish dotenv-mode lv pcre2el bind-key which-key emacsql-sqlite org-roam org-transclusion org-ql nose helm-org-ql helm-bibtex org string-edit info+ hybrid-mode hide-comnt font-lock+ evil-unimpaired evil-ediff))
  '(verilog-indent-level 2)
  '(verilog-indent-level-behavioral 2)
  '(verilog-indent-level-declaration 2)
