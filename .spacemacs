@@ -62,6 +62,10 @@ This function should only modify configuration layer settings."
      table-manipulation
      ;; bookmarks
      bm
+     ;; SLY is Common Lisp IDE, this is a spacemacs layer for it
+     ;; See https://github.com/programingship/common-lisp-sly
+     ;; I cloned that git repo into ~/.emacs.d/private
+     common-lisp-sly
      )
 
    ;; List of additional packages that will be installed without being wrapped
@@ -1364,6 +1368,8 @@ before packages are loaded."
   (setq calendar-intermonth-header
         (propertize "Wk" 'font-lock-face 'font-lock-preprocessor-face))
   
+  (setq inferior-lisp-program "/usr/bin/sbcl")
+
   ;; This will automatically change font size depending on which monitor emacs
   ;; is on
   ;; This interrupts me when I'm in a elisp debugging session
