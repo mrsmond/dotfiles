@@ -10,6 +10,13 @@ Remember to use the config alias to add files, commit them, etc.
 
 Remember to add your public ssh key to [github](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
+I could not work out how to checkout the branch ast\_windows to my home Linux
+machine so I could merge/cherry-pick bits of the ast\_windows into main.
+ast\_windows was added after the initial clone. I could fetch it, but it would
+not appear in `config branch -a`, however, it did appear in `config ls-remote
+origin`. I wonder if it is because it is a bare repo. So I ended up cloning the
+normal way (not bare) into ~/src and going from there.
+
 ## Starting on a new machine
 Get the bare repo into the `.dotfiles` directory:
 

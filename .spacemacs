@@ -44,8 +44,6 @@ This function should only modify configuration layer settings."
                  evil-snipe-enable-alternate-f-and-t-behaviors t)
      git
      helm
-     ;; lsp
-     ;; markdown
      multiple-cursors
      (org :variables
           ;; See https://github.com/Somelauw/evil-org-mode/blob/master/doc/keythemes.org
@@ -57,7 +55,6 @@ This function should only modify configuration layer settings."
           org-enable-transclusion-support t
           )
      spell-checking
-     ;; syntax-checking
      version-control
      pdf
      python
@@ -608,6 +605,9 @@ dump."
   (setq org-directory (expand-file-name "~/owncloud/org"))
   ;; used before use-package's custom property
   (setq org-roam-directory (f-join org-directory "roam"))
+  ;; put here because dgraham/org-roam-is-daily uses it and causes an error when
+  ;; finding a node before loading org-roam-dailies
+  (setq org-roam-dailies-directory (f-join org-roam-directory "journal"))
   ;; Put here to avoid org-roam from picking up template files as they have ID properties
   (setq dgraham/org-template-directory (f-join org-directory "templates"))
   (setq org-default-notes-file (f-join org-directory "inbox.org"))
@@ -967,7 +967,6 @@ dump."
      )
     :custom
     ;; setq shouldn't be use as some of these variables might have custom setter
-    (org-roam-dailies-directory (f-join org-roam-directory "journal"))
     (org-roam-completion-everywhere t)
     (org-roam-node-display-template 
      (concat "${title:*} ${description:*}"
@@ -1433,7 +1432,7 @@ before packages are loaded."
       ;; Name of source 
       "Meetings"
       ;; The file where to get the strings, one per line
-      (expand-file-name "~/owncloud/org/ast/meeting_headlines.txt")
+      (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
       ;; What to do with the selected candidate(s)
       :action (helm-make-actions "Insert" (lambda (candidate) (insert candidate)))
       )
@@ -1450,7 +1449,7 @@ before packages are loaded."
             ;; Name of source 
             "Meetings"
             ;; The file where to get the strings, one per line
-            (expand-file-name "~/owncloud/org/ast/meeting_headlines.txt")
+            (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
           ;; What to do with the selected candidate(s)
           :action (helm-make-actions "Select" (lambda (candidate) (concat "" candidate)))
           )
