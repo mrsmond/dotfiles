@@ -936,11 +936,9 @@ dump."
 
   ;; Add an ID to every TODO, I don't exclude it from org-roam because I want
   ;; the two-way linking
-  (advice-add 'org-insert-todo-heading :after #'org-id-get-create) 
+  (advice-add 'org-insert-todo-heading :after #'org-id-get-create)
 
-  ;; Not sure what the advice way of doing this is 
-  (add-hook 'org-capture-mode-hook
-            #'org-id-get-create)  
+  ;;TODO: Add a hook or advice to add a CREATED property on the capture of a org-roam file
 
   ;; In combination with org-id-complete-link defined later, this allows
   ;; completion of headings with IDs when inserting a link
@@ -1043,7 +1041,18 @@ dump."
        ("d" "default" entry
         "* %<%H:%M> - %?"
         :if-new (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+category: journal\n"))
+       )
+     )
+    ;; org-roam-protocol uses this variable for templates not the normal one above
+    (org-roam-capture-ref-templates
+     '(
+       ;; Using templates doesn't work properly, I get duplicate properties
+       ("b" "Bookmark" plain
+        "%?"
+        :target (file+head "bookmarks/%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n#+category: bookmark\n#+FILETAGS: bookmark\n\n#+BEGIN_QUOTE\n${body}\n#+END_QUOTE\n\n")
+        :unnarrowed t
         )
+       )
      )
     ;; :config keyword can be use to execute code after a package is loaded
     :config
@@ -1069,10 +1078,23 @@ dump."
         )
       )
 
+    (cl-defmethod dgraham/org-roam-is-bookmark (node)
+      "Return t if the node is a bookmark node, nil otherwise"
+      (let* (
+             (file-path (org-roam-node-file node))
+             (full-dirname (f-full (f-dirname file-path)))
+             (bookmark-dirname (f-full (f-join org-roam-directory "bookmarks")))
+             )
+        (string= full-dirname bookmark-dirname)
+        )
+      )
+
     (cl-defmethod dgraham/org-roam-node-is-visible (node)
       "Return t if the node is of a type that I want to find or insert, nil otherwise"
       (and (not (dgraham/org-roam-is-daily node))
-           (not (org-roam-node-todo node)))
+           (not (dgraham/org-roam-is-bookmark node))
+           (not (org-roam-node-todo node))
+           )
       )
 
     (defun dgraham/org-roam-node-find ()
@@ -1375,6 +1397,9 @@ before packages are loaded."
   ;; This interrupts me when I'm in a elisp debugging session
   ;;(add-hook 'window-size-change-functions (lambda (frame) (dgraham/adjust-font-size-based-on-display)))
   ;;(add-hook 'after-focus-change-function #'dgraham/adjust-font-size-based-on-display)
+
+  ;; For bookmarklet to save bookmark as org-roam node
+  (require 'org-roam-protocol)
   )
 
 ;; Make sure that clicking on the X button of the window doesn't close
