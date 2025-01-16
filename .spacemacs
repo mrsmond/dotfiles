@@ -49,17 +49,11 @@ This function should only modify configuration layer settings."
           ;; See https://github.com/Somelauw/evil-org-mode/blob/master/doc/keythemes.org
           ;; This will add todo keybindings, so I can use t on a TODO heading
           org-want-todo-bindings t
-          ;; spacemacs requires this to load the org-roam layer so use-package
-          ;; org-roam below works
-          org-enable-roam-support t
-          org-enable-transclusion-support t
           )
      spell-checking
      version-control
      pdf
      python
-     ;; in ~/.emacs.d/private
-     table-manipulation
      ;; bookmarks
      bm
      )
@@ -76,16 +70,9 @@ This function should only modify configuration layer settings."
                                       helm-org-rifle
                                       helm-org
                                       helm-rg
-                                      org-super-agenda
                                       rainbow-mode
                                       wgrep-helm
-                                      org-roam
-                                      org-noter
                                       math-preview
-                                      org-ql
-                                      org-transclusion
-                                      vulpea
-                                      org-modern
                                       )
 
    ;; A list of packages that cannot be updated.
@@ -603,13 +590,6 @@ dump."
   ;;;         (find-lisp-find-files "~/Dropbox/GTD/ActiveProjects" "\.org$"))
   ;;;   ))
   (setq org-directory (expand-file-name "~/owncloud/org"))
-  ;; used before use-package's custom property
-  (setq org-roam-directory (f-join org-directory "roam"))
-  ;; put here because dgraham/org-roam-is-daily uses it and causes an error when
-  ;; finding a node before loading org-roam-dailies
-  (setq org-roam-dailies-directory (f-join org-roam-directory "journal"))
-  ;; Put here to avoid org-roam from picking up template files as they have ID properties
-  (setq dgraham/org-template-directory (f-join org-directory "templates"))
   (setq org-default-notes-file (f-join org-directory "inbox.org"))
 
   ;; I use a hook to add files here that contain TODOs
@@ -675,46 +655,6 @@ dump."
   ;; as subscripts (same for ^ as super-script)
   (setq org-use-sub-superscripts '{})
   (setq org-export-with-sub-superscripts '{})
-
-  (setq org-capture-templates
-        ;; Note the backtick so I cat use functions in constructing the list
-        `(
-          ("t" "Todo [inbox]" entry
-           ;; inbox gets used as a bucket so don't put it under Tasks like work.org
-           (file ,(concat org-directory "/inbox.org"))
-           "* TODO %?\n:LOGBOOK:\n- State \"TODO\"       from            %U\n:END:\nCreated from %a.")
-          ("w" "Todo [work]" entry
-           (file+headline ,(concat org-directory "/ast/work.org") "One-Off Tasks")
-           "* TODO %?\n:LOGBOOK:\n- State \"TODO\"       from            %U\n:END:\nCreated from %a.")
-          ("a" "Acronym" entry
-           (file+headline ,(concat org-roam-directory "/ast/20220317161021-glossary.org") "Acronyms")
-           "* %^{Acronym}\n:PROPERTIES:\n:ID: %(org-id-new)\n:DESCRIPTION: %^{Description}\n:END:\n%?")
-          ;; Reviews are here, not in org-roam capture
-          ;; templates because I can't get :time-prompt to
-          ;; work
-
-          ;; Reviews are under a different category for two reasons:
-          ;;   1. Although they are work based now, they should be for everything
-          ;;   2. Leads to a nicer grouping of weekly, monthly, and yearly
-          ("r" "Reviews")
-          ("rw" "Weekly review" plain
-           ; target
-           ;; Make sure you manually create the folder with the year
-           (file dgraham/org-capture-target-for-weekly-review)
-
-           ; template
-           (file ,(concat dgraham/org-template-directory "/reviews/weekly_review.org"))
-          )
-          ;;("rm" "Monthly review" plain
-           ;; target
-           ;; template
-           ;;(file ,(concat dgraham/org-template-directory "/reviews/monthly_review.org"))
-                                        ; )
-          ;;("ry" "Yearly review" plain
-          ;;(file ,(concat dgraham/org-template-directory "/reviews/yearly_review.org"))
-          ;; )
-          )
-        )
 
   ;; When I add a TODO I want this recorded with a time stamp as then I know
   ;; when I created it
@@ -832,85 +772,6 @@ dump."
     (add-to-list 'helm-completing-read-handlers-alist '(org-set-tags-command . helm-org-completing-read-tags))
     )
 
-  ;; org-super-agenda layout - we need to set a custom agenda command because
-  ;; org-super-agenda takes the items given to it by org-agenda-list or
-  ;; org-todo-list etc. So to have both a week view with scheduled/deadline
-  ;; tasks and then other todo items categorised, we need to run multiple agenda
-  ;; commands
-  (org-super-agenda-mode t)
-  (setq org-agenda-custom-commands
-        '(("u" "Super view"
-           (
-            (agenda "" (;; The default is week, but that has the problem that
-                        ;; the same items appear in multiple days
-                        (org-agenda-span 'day)
-                        (org-super-agenda-groups
-                         '(
-                           (:discard
-                            ;; Can't use variables or functions without some
-                            ;; sort of escaping of data, which I don't know how
-                            ;; to do
-                            (:file-path "/home/dgraham/owncloud/org/[^/]*\.org$")
-                            )
-                           (:name "Today"
-                                  :time-grid t
-                                  :scheduled today
-                                  :deadline today
-                                  )
-                           (:name "Overdue"
-                                  :time-grid t
-                                  :deadline past)
-                           (:name "Re-schedule"
-                                  :time-grid t
-                                  :scheduled past)
-                           (:name "Due Soon"
-                                  :time-grid t
-                                  :deadline future)
-                           )))
-                    ) ;; agenda
-            (alltodo "" (
-                         ;; Get rid of the default header "Global list of ..."
-                         (org-agenda-overriding-header "")
-                         (org-super-agenda-groups
-                          '(
-                            (:discard
-                             ;; Can't use variables or functions without some
-                             ;; sort of escaping of data, which I don't know how
-                             ;; to do
-                             (:file-path "/home/dgraham/owncloud/org/[^/]*\.org$")
-                             )
-                            (:name " Next "
-                                   :and ( 
-                                         :todo "NEXT"
-                                         :not (:tag "someday")
-                                         )
-                                   )
-                            (:name " Started "
-                                   :and ( 
-                                         :todo "STARTED"
-                                         :not (:tag "someday")
-                                         )
-                                   )
-                            (:name " Waiting "
-                                   :and (
-                                         :todo "WAITING"
-                                         :not (:tag "someday")
-                                         )
-                                   )
-                            (:name " Waiting (Someday)"
-                                   :and (
-                                         :todo "WAITING"
-                                         :tag "someday"
-                                         )
-                                   )
-                            ;; If you don't have this all other items will be
-                            ;; put into a separate category
-                            (:discard (:anything t))
-                            )))
-                    ) ;; alltodo 
-           ))) ;; org-agenda-custom-commands value
-        )  ;; setq
-
   ;; Hide tags from the agenda view that match these tags
   ;; If you want to OR strings instead of \\| you can use:
   ;;  (regexp-opt '("tag1" "tag2" "tag3"))
@@ -924,7 +785,6 @@ dump."
           (todo . " %i %-20:c")
           (tags . " %i %-20:c")
           (search . " %i %-20:c")))
-
 
   ;; When storing and inserting links, use the existing ID (set by
   ;; org-id-get-create) as the link instead of the text of the headline
@@ -943,340 +803,10 @@ dump."
   (org-link-set-parameters "id"
                            :complete 'org-id-complete-link)
 
-  ;; Define a new super group category for org-super-agenda and org-ql
-  (org-super-agenda--def-auto-group project "their project name"
-    :key-form (org-super-agenda--when-with-marker-buffer (org-super-agenda--get-marker item)
-                (if (string= (buffer-name) "work.org")
-                    ;; old project or one-off tasks or someday in work.org
-                    (when (org-up-heading-safe) (org-get-heading 'notags 'notodo))
-                  ;; new project in an org-roam node
-                  (car (cdr (car (org-collect-keywords '("TITLE")))))
-                ))) 
-  ;; org-roam setup
-  ;; I've done it using use-package because calling org-roam-db-autosync-mode
-  ;; needs org-roam loaded first
-  (use-package org-roam
-    :ensure t
-    :init 
-    ;; In init, setq is needed
-    (setq org-roam-v2-ack t)
-    :bind
-    (
-     ("<f5>" . org-roam-dailies-goto-previous-note)
-     ("<f6>" . org-roam-dailies-goto-next-note)
-     )
-    :custom
-    ;; setq shouldn't be use as some of these variables might have custom setter
-    (org-roam-completion-everywhere t)
-    (org-roam-node-display-template 
-     (concat "${title:*} ${description:*}"
-             (propertize "${tags:10}" 'face 'org-tag)))
-    (org-roam-capture-templates
-     ;; Note this uses backtick instead of apostrophe because the file argument
-     ;; used for org templates takes a string and I want to call the function
-     ;; concat
-     `(
-       ;; All the following nodes will go in the ast directory, relative to org-roam-directory
-       ("w" "Work")
-       ;; Copied from the default value, added category to make it look nicer in
-       ;; the agenda view
-       ("wn" "Work note" plain
-        ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat dgraham/org-template-directory "/ast/note.org"))
-        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}.org")
-        )
-       ;;TODO: This adds an extra property drawer with ID so requires manual edit
-       ("wi" "Work interview" plain
-        ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat dgraham/org-template-directory "/ast/interview.org"))
-        ;; Just type the person's name and "Interview of" will be added in the right place
-        :if-new (file "ast/%<%Y%m%d%H%M%S>-interview_of_${slug}.org")
-        )
-       ;; TODO: Add prompt for company and person, then compute ROAM_ALIASES as first name and first letter of last name
-       ("wp" "Work person" plain
-        "%?"
-        :target (file+head "ast/%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n#+category: person\n#+FILETAGS: person\n\n* Questions\n")
-        :unnarrowed t
-        )
-       ("wm" "Work meeting" plain
-        "%?"
-        :target (file+head "ast/%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n#+category: meeting\n#+FILETAGS: meeting\nA place to easily see all occurrences of this meeting as backlinks in the org roam buffer.") 
-        :unnarrowed t
-        )
-       ("wj" "Work project" plain
-        ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat dgraham/org-template-directory "/ast/project.org"))
-        ;; The title will have Project added to the end so don't type it
-        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}_project.org")
-        )
-       ("wa" "Work Area of Responsibility" plain
-        ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat dgraham/org-template-directory "/ast/aor.org"))
-        ;; The title will have AoR added to the end so don't type it
-        :if-new (file "ast/%<%Y%m%d%H%M%S>-${slug}_aor.org")
-        )
-       ;; All the following nodes will go in the personal directory, relative to org-roam-directory 
-       ("p" "Personal")
-       ("pn" "Personal note" plain
-        "%?"
-        :target (file+head "personal/%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n#+category: personal\n")
-        :unnarrowed t
-        )
-       ("pj" "Personal project" plain
-        ;; When the file name is not absolute, Org assumes it is relative to org-directory
-        (file ,(concat dgraham/org-template-directory "/personal/project.org"))
-        ;; The title will have Project added to the end so don't type it
-        :if-new (file "personal/%<%Y%m%d%H%M%S>-${slug}_project.org")
-        )
-       ;; Reviews are not here because this roam template variable doesn't
-       ;; support using a function to defined the name of the node, which is
-       ;; needed to set the date at which the review is for as that might not be
-       ;; the current date
-       )
-     )
-    (org-roam-dailies-capture-templates
-     '(
-       ("d" "default" entry
-        "* %<%H:%M> - %?"
-        :if-new (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+category: journal\n"))
-        )
-     )
-    ;; :config keyword can be use to execute code after a package is loaded
-    :config
-    (org-roam-db-autosync-mode)
-    ;; This needs to go into the config section because the ARGLIST uses a
-    ;; default value of org-roam-node, which is only available after org-roam is
-    ;; setup
-    (cl-defmethod org-roam-node-description ((node org-roam-node))
-      "Return the DESCRIPTION property for a node if it exists,
-   otherwise nil"
-      (cdr (assoc "DESCRIPTION" (org-roam-node-properties node)))
-      )
-
-    ;;TODO: I need to use the org-roam daily functionality before org-roam-dailies-directory is defined
-    (cl-defmethod dgraham/org-roam-is-daily (node)
-      "Return t if the node is a daily node, nil otherwise"
-      (let* (
-             (file-path (org-roam-node-file node))
-             (full-dirname (f-full (f-dirname file-path)))
-             (daily-dirname (f-full (f-join org-roam-directory org-roam-dailies-directory)))
-             )
-        (string= full-dirname daily-dirname)
-        )
-      )
-
-    (cl-defmethod dgraham/org-roam-node-is-visible (node)
-      "Return t if the node is of a type that I want to find or insert, nil otherwise"
-      (and (not (dgraham/org-roam-is-daily node))
-           (not (org-roam-node-todo node)))
-      )
-
-    (defun dgraham/org-roam-node-find ()
-      "Find a org-roam node, but exclude dailies as you can do that
-from org-roam-dailies-goto-date and exclude TODO nodes"
-      (interactive)
-      (org-roam-node-find nil nil
-                          (lambda (node) (dgraham/org-roam-node-is-visible node))
-                          )
-      )
-
-    (defun dgraham/org-roam-node-insert ()
-      "Insert a org-roam node, but exclude dailies as that is not a
-common thing to insert and exclude TODOs."
-      (interactive)
-      (org-roam-node-insert
-       (lambda (node) (dgraham/org-roam-node-is-visible node))
-       )
-      )
-
-    ;; Insert a link to a new node without opening it
-    ;; Modified from https://systemcrafters.net/build-a-second-brain-in-emacs/5-org-roam-hacks/
-    ;; Didn't need the ability to forward args on
-    (defun dgraham/org-roam-node-insert-immediate ()
-      (interactive)
-      (let (
-            (org-roam-capture-templates (list (append (car org-roam-capture-templates)
-                                                      '(:immediate-finish t))))
-            )
-        (dgraham/org-roam-node-insert)
-        )
-      )
-    )  ;; use-package org-roam
-
-  (use-package vulpea
-    :ensure t
-    ;; hook into org-roam-db-autosync-mode you wish to enable
-    ;; persistence of meta values (see respective section in README to
-    ;; find out what meta means)
-    :hook (
-           (org-roam-db-autosync-mode . vulpea-db-autosync-enable)
-           ;; Add a special tag to a org-roam node if it contains a TODO so that
-           ;; it the TODO is visible in org-agenda
-           (find-file                 . vulpea-project-update-tag)
-           (before-save               . vulpea-project-update-tag)
-           )
-
-    :config
-    ;; From https://d12frosted.io/posts/2021-01-16-task-management-with-roam-vol5.html
-    ;; As it's not in the vulpea package
-    (defun vulpea-project-p ()
-      "Return non-nil if current buffer has any todo entry.
-
-TODO entries marked as done are ignored, meaning the this
-function returns nil if current buffer contains only completed
-tasks."
-      (org-element-map
-          (org-element-parse-buffer 'headline)
-          'headline
-        (lambda (h)
-          (eq (org-element-property :todo-type h)
-              'todo))
-        nil 'first-match))                     
-
-    (defun vulpea-project-update-tag ()
-      "Update tag in the current buffer."
-      (when (and (not (active-minibuffer-window))
-                 (vulpea-buffer-p))
-        (save-excursion
-          (goto-char (point-min))
-          (let* ((tags (vulpea-buffer-tags-get))
-                 (original-tags tags))
-            (if (vulpea-project-p)
-                (setq tags (cons "has_todo" tags))
-              (setq tags (remove "has_todo" tags)))
-
-            ;; cleanup duplicates
-            (setq tags (seq-uniq tags))
-
-            ;; update tags if changed
-            (when (or (seq-difference tags original-tags)
-                      (seq-difference original-tags tags))
-              (apply #'vulpea-buffer-tags-set tags))))))
-
-    (defun vulpea-buffer-p ()
-      "Return non-nil if the currently visited buffer is a note."
-      (and buffer-file-name
-           (string-prefix-p
-            (expand-file-name (file-name-as-directory org-roam-directory))
-            (file-name-directory buffer-file-name))))
-
-    (defun vulpea-project-files ()
-      "Return a list of note files containing 'has_todo' tag." ;
-      (seq-uniq
-       (seq-map
-        #'car
-        (org-roam-db-query
-         [:select [nodes:file]
-                  :from tags
-                  :left-join nodes
-                  :on (= tags:node-id nodes:id)
-                  :where (like tag (quote "%\"has_todo\"%"))]))))
-
-    ;; From a comment in the page above. Used to append rather than overwrite the
-    ;; org-agenda-files variable
-    (defun inject-vulpea-project-files (org-agenda-files--output)
-      (append org-agenda-files--output (vulpea-project-files)))
-
-    (advice-add 'org-agenda-files :filter-return #'inject-vulpea-project-files)
-    ) ;; use-package vulpea
-
-  (org-add-link-type "outlook" 'org-outlook-open)
-
-  ;; Change and add missing dailies shortcuts
-  (spacemacs/declare-prefix-for-mode 'org-mode "mrdc" "capture")
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdcy" 'org-roam-dailies-capture-yesterday)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdcc" 'org-roam-dailies-capture-today) ;; same key as header
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdct" 'org-roam-dailies-capture-tomorrow)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdcd" 'org-roam-dailies-capture-date)
-
-  (spacemacs/declare-prefix-for-mode 'org-mode "mrdg" "goto")
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdgy" 'org-roam-dailies-goto-yesterday)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdgg" 'org-roam-dailies-goto-today) ;; same key as header
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdgt" 'org-roam-dailies-goto-tomorrow)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdgd" 'org-roam-dailies-goto-date)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdgb" 'org-roam-dailies-goto-previous-note)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rdgf" 'org-roam-dailies-goto-next-note)
-
-  ;; Use my own find node function that filters out dailies
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rf" 'dgraham/org-roam-node-find)
-
-  ;; Swap insert bindings as most of the time I won't want to go to a new node
-  ;; when inserting a link
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "ri" 'dgraham/org-roam-node-insert-immediate)
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "rI" 'dgraham/org-roam-node-insert)
-
-  ;; org-roam-dailies-goto-previous-note
-  ;; org-roam-dailies-goto-next-note
-  (spacemacs|define-transient-state org-roam-dailies
-    :title "Org-roam Dailes transient state"
-    :doc
-    "
-[_p_] previous note  [_n_] next note
-"
-    :bindings
-    ("p" org-roam-dailies-goto-previous-note)
-    ("n" org-roam-dailies-goto-next-note)
-    )
-  
-  (spacemacs/set-leader-keys-for-major-mode 'org-mode "r." 'spacemacs/org-roam-dailies-transient-state/body)
-
   (spacemacs/set-leader-keys-for-major-mode 'org-mode "/" 'dgraham/yank-link)
   (spacemacs/set-leader-keys-for-major-mode 'org-mode "@" 'dgraham/yank-link-href) 
 
-  ;;TODO:Change this to be a layer after I move to dofiles repo
-  ;;(load "~/.emacs.d/private/local/my-org-writing-mode/my-org-writing-mode.el")
   ) ;; dgraham/org-config
-
-;; (defun dgraham/org-ql-views ()
-;;   (let* (
-;;          ;; Start date is today if today is Monday or the previous Monday
-;;          (start-date (if (= 1 (nth 6 (decode-time))) (current-time) (org-read-date nil 'totime "-Mon")))
-;;          (all-dates )
-;;          (this-week-file-names )
-;;          (files (->> (f--files 'org-roam-dailies-directory (equal (f-ext it) "org"))))
-;;          )
-;;     (org-ql-search files
-;;       '(and (todo)
-;;             (tags "PROJECT"))
-;;       :super-groups '((:auto-category t)))
-;;     )
-;;   )
-
-(defun dgraham/load-pss-mode ()
- "Defines my own mode for the Portable Test and Stimulus
-Standard (PSS) DSL."
- (require 'generic-x)
- ;;(require 'regexp-opt)
-
- (define-generic-mode 'pss-mode
-   ;; comments start with // TODO: How to do multi-line comments?
-   '("//")
-   ;; keywords - this is a simple way to associate these strings with the
-   ;; font-lock-keyword-face
-   '("package" "import" "export" "component" "action" "activity" "extend"
-     "static" "const" "abstract"
-     "struct" "typeof"
-     "constraint" "rand" "with"
-     "parallel" "sequence" "schedule"
-     "lock" "share" "buffer" "stream" "state" "resource"
-     "bind" "pool"
-     "super" "exec" "pure" "function" "void" "type"
-     "do" "if" "else" "foreach" "while"
-     )
-   ;; Here's how you can associate other faces
-   ;; NOTE: We use the backtick to make sure that the result of regexp-opt is used i.e. a string
-   `(
-     (,(regexp-opt '("bit" "int" "bool" "enum" "string" "chandle") 'words) . 'font-lock-type-face)
-     (,(regexp-opt '("input" "output" "inout" "ref") 'words) . 'font-lock-type-face)
-     ("\<pss_top\>" . 'font-lock-builtin-face)
-     )
-   ;; Which file extensions to autoload this mode on
-   '(".pss\\'")
-   ;; FUNCTION-LIST
-   nil
-   "Major mode for the Portable Test and Stimulus Standard (PSS) DSL"
-   )
-  )
 
 (defun dotspacemacs/user-config ()
   "Configuration for user code:
@@ -1331,8 +861,6 @@ before packages are loaded."
   (setq helm-ag-base-command "rg --line-number --no-heading --smart-case --color=always --hidden --follow %s %s %s")
   ;; This is what helm uses from the AG command when finding files
   (setq helm-grep-ag-command "rg --line-number --no-heading --smart-case --color=always --hidden --follow %s %s %s")
-
-  (dgraham/load-pss-mode)
 
   ;; When using WSL, open URLs in Windows browser
   (let ((cmd-exe "/mnt/c/Windows/System32/cmd.exe")
@@ -1423,49 +951,6 @@ before packages are loaded."
     (error (message "Invalid expression")
            (insert (current-kill 0)))))
 
-(defun dgraham/insert-meeting-headline ()
-  (interactive)
-  (helm :sources
-    ;; This is a macro to make building a source list for a file easier
-    ;; (helm-source-in-file underneath)
-    (helm-build-in-file-source
-      ;; Name of source 
-      "Meetings"
-      ;; The file where to get the strings, one per line
-      (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
-      ;; What to do with the selected candidate(s)
-      :action (helm-make-actions "Insert" (lambda (candidate) (insert candidate)))
-      )
-    )
-  ) 
-
-;; This is for yasnippet org-roam-daily-entry
-(defun dgraham/select-meeting-headline ()
-  (interactive)
-  (helm :sources
-        ;; This is a macro to make building a source list for a file easier
-        ;; (helm-source-in-file underneath)
-        (helm-build-in-file-source
-            ;; Name of source 
-            "Meetings"
-            ;; The file where to get the strings, one per line
-            (expand-file-name (f-join org-directory "ast/meeting_headlines.txt"))
-          ;; What to do with the selected candidate(s)
-          :action (helm-make-actions "Select" (lambda (candidate) (concat "" candidate)))
-          )
-        )
-  ) 
-
-;; This is used in yasnippet org-roam-daily-entry
-(defun dgraham/format-decoded-time (time)
-  (let* (
-         (hour (decoded-time-hour time))
-         (min (decoded-time-minute time))
-         )
-    (format "%02d:%02d" hour min)
-    )
-  )
-
 ;; This function exists in the Windows version of Emacs, but since I'm running
 ;; this through WSL it's the Linux version of Emacs, which doesn't have this
 ;; command
@@ -1517,41 +1002,6 @@ before packages are loaded."
     (when (eq type 'link)
       (kill-new (org-element-property :raw-link context))))) 
 
-;; You can call the following function on all existing TODO items in a file
-;; with:
-
-;;   (org-map-entries '(dgraham/add-excluded-id) "/TODO" 'file)
-
-;; This will only match TODO headlines, not NEXT, STARTED, DONE, etc. I can't
-;; find how to easily say "any TODO item". The / in MATCH is a shortcut to match
-;; on TODO state, i.e. equivalent to "TODO=\"TODO\""
-;;
-
-;; You can use 'agenda for all files that are searched for building the agenda,
-;; which for me is all files with TODO items
-
-;; This calls the function on any TODO that doesn't have an ID already:
-
-;;  (org-map-entries '(dgraham/add-excluded-id) "ID=\"\"/TODO|NEXT|STARTED|WAITING|DONE|CANCELLED|DEFFERED" 'file)
-
-;; As this is advice-add'ed around a function that takes arguments, this has to
-;; take the same number of args, but since we don't use them we can specify the
-;; args like this to ignore them (the underscore tells the byte-compiler that
-;; the args are deliberately ignored)
-;;
-
-;; My current thinking is not to use this function as it excludes it from the
-;; database of two-way linking that org-roam maintains. It's useful to have
-;; backlinks to everything, but I don't want it to appear when I want to go to a
-;; note.
-(defun dgraham/add-excluded-id (&rest _args)
-  "Add an ID property to the TODO heading this is called on, but
-ensure it is excluded by org-roam"
-  (interactive)
-  (org-id-get-create)
-  (org-set-property "ROAM_EXCLUDE" "t")
-  )
-
 ;; See https://emacs.stackexchange.com/questions/12391/insert-org-id-link-at-point-via-outline-path-completion
 ;;
 ;; This allows you to get completion on linking to headings (e.g. TODOs) with
@@ -1582,30 +1032,6 @@ ensure it is excluded by org-roam"
     )
   )
 
-;; Used in org-capture template
-;; E.g. (dgraham/format-string-from-prompt "%G-W%V")
-(defun dgraham/format-time-string-from-prompt (string)
-  "Pass a string that format-string understands but based upon the
-date the user provides."
-  (format-time-string string (org-read-date nil 'totime nil "Review date: "))
-  )
-
-(defun dgraham/org-capture-target-for-weekly-review ()
-  (let* (
-         (review-date (org-read-date nil 'totime nil "Review date: "))
-         ;; %G is the ISO week year as there can be some seemingly odd
-         ;; situations where the ISO week number doesn't match the Gregorian
-         ;; date.
-         (review-date-string (format-time-string "/reviews/%G/%G-W%V-weekly_review.org" review-date))
-         )
-    ;; time-prompt isn't recognised and neither is C-1 to org-capture, looking
-    ;; at the source code, it uses this, but doesn't work either. However, I use
-    ;; it in the template file to get the review date not the current date.
-    (setq org-overriding-default-time review-date)
-    (concat org-roam-directory review-date-string)
-    )
-  )
-
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
 (defun dotspacemacs/emacs-custom-settings ()
@@ -1622,14 +1048,8 @@ This function is called at the very end of Spacemacs initialization."
  '(helm-buffer-max-length nil)
  '(helm-descbinds-disable-which-key nil)
  '(ispell-dictionary "en_GB")
- '(org-format-latex-options
-   '(:foreground default :background default :scale 1.2 :html-foreground "Black" :html-background "Transparent" :html-scale 1.0 :matchers
-                 ("begin" "$1" "$" "$$" "\\(" "\\[")))
- '(org-transclusion-exclude-elements '(property-drawer keyword))
- '(org-transclusion-extensions
-   '(org-transclusion-src-lines org-transclusion-font-lock org-transclusion-indent-mode))
  '(package-selected-packages
-   '(gnu-elpa-keyring-update bm org-modern evil-evilified-state holy-mode use-package magit-popup vulpea ac-ispell ace-jump-helm-line ace-link aggressive-indent auto-compile auto-complete auto-dictionary auto-highlight-symbol auto-yasnippet blacken browse-at-remote centered-cursor-mode clean-aindent-mode code-cells column-enforce-mode company-anaconda anaconda-mode cython-mode define-word devdocs dired-quick-sort drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args evil-cleverparens paredit evil-collection annalist evil-easymotion evil-escape evil-exchange evil-goggles evil-iedit-state iedit evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa flycheck-package package-lint flycheck flyspell-correct-helm flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter git-link git-messenger git-modes git-timemachine gitignore-templates gnuplot golden-ratio google-translate helm-ag helm-c-yasnippet helm-company company helm-git-grep helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop helm-themes helm-xref helm helm-core help-fns+ highlight-indentation highlight-numbers parent-mode highlight-parentheses hl-todo htmlize hungry-delete importmagic epc ctable concurrent deferred indent-guide inspector link-hint live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up nameless open-junk-file org-cliplink org-contrib org-download org-mime org-noter org-pomodoro alert log4e gntp org-present org-projectile org-category-capture org-rich-yank org-superstar orgit-forge orgit forge yaml markdown-mode ghub closql treepy overseer pkg-info epl paradox spinner password-generator pdf-view-restore pdf-tools tablist pip-requirements pipenv load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode pythonic pylookup pytest pyvenv quickrun rainbow-delimiters rainbow-mode request restart-emacs smartparens smeargle space-doc spaceline-all-the-icons memoize spaceline all-the-icons powerline spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc string-edit-at-point string-inflection symbol-overlay symon term-cursor toc-org treemacs-evil treemacs-icons-dired treemacs-magit magit git-commit with-editor transient treemacs-persp persp-mode treemacs-projectile treemacs projectile cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep window-purpose imenu-list winum writeroom-mode visual-fill-column ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async bind-map diminish dotenv-mode lv pcre2el bind-key which-key emacsql-sqlite org-roam org-transclusion org-ql nose helm-org-ql helm-bibtex string-edit info+ hybrid-mode hide-comnt font-lock+ evil-unimpaired evil-ediff))
+   '(gnu-elpa-keyring-update evil-evilified-state holy-mode use-package magit-popup ac-ispell ace-jump-helm-line ace-link aggressive-indent auto-compile auto-complete auto-dictionary auto-highlight-symbol auto-yasnippet blacken browse-at-remote centered-cursor-mode clean-aindent-mode code-cells column-enforce-mode company-anaconda anaconda-mode cython-mode define-word devdocs dired-quick-sort drag-stuff dumb-jump editorconfig elisp-def elisp-slime-nav emr clang-format list-utils eval-sexp-fu evil-anzu anzu evil-args evil-cleverparens paredit evil-collection annalist evil-easymotion evil-escape evil-exchange evil-goggles evil-iedit-state iedit evil-indent-plus evil-lion evil-lisp-state evil-matchit evil-mc evil-nerd-commenter evil-numbers evil-org evil-snipe evil-surround evil-textobj-line evil-tutor evil-visual-mark-mode evil-visualstar expand-region eyebrowse fancy-battery flx-ido flx flycheck-elsa flycheck-package package-lint flycheck flyspell-correct-helm flyspell-correct fuzzy git-gutter-fringe fringe-helper git-gutter git-link git-messenger git-modes git-timemachine gitignore-templates gnuplot golden-ratio google-translate helm-ag helm-c-yasnippet helm-company company helm-git-grep helm-ls-git helm-make helm-mode-manager helm-org helm-org-rifle helm-projectile helm-purpose helm-pydoc helm-rg helm-swoop helm-themes helm-xref helm helm-core help-fns+ highlight-indentation highlight-numbers parent-mode highlight-parentheses hl-todo htmlize hungry-delete importmagic epc ctable concurrent deferred indent-guide inspector link-hint live-py-mode lorem-ipsum macrostep math-preview multi-line shut-up nameless open-junk-file org-cliplink org-contrib org-download org-mime org-noter org-pomodoro alert log4e gntp org-present org-projectile org-category-capture org-rich-yank org-superstar orgit-forge orgit forge yaml markdown-mode ghub closql treepy overseer pkg-info epl paradox spinner password-generator pdf-view-restore pdf-tools tablist pip-requirements pipenv load-env-vars pippel poetry popup popwin py-isort pydoc pyenv-mode pythonic pylookup pytest pyvenv quickrun rainbow-delimiters rainbow-mode request restart-emacs smartparens smeargle space-doc spaceline-all-the-icons memoize spaceline all-the-icons powerline spacemacs-purpose-popwin spacemacs-whitespace-cleanup sphinx-doc string-edit-at-point string-inflection symbol-overlay symon term-cursor toc-org treemacs-evil treemacs-icons-dired treemacs-magit magit with-editor transient treemacs-persp persp-mode treemacs-projectile treemacs projectile cfrs hydra pfuture ace-window avy posframe undo-tree queue uuidgen vi-tilde-fringe vim-powerline volatile-highlights wgrep-helm wgrep window-purpose imenu-list winum writeroom-mode visual-fill-column ws-butler yapfify yasnippet-snippets yasnippet zenburn-theme async bind-map diminish dotenv-mode lv pcre2el bind-key which-key emacsql-sqlite nose helm-bibtex string-edit info+ hybrid-mode hide-comnt font-lock+ evil-unimpaired evil-ediff))
  '(verilog-indent-level 2)
  '(verilog-indent-level-behavioral 2)
  '(verilog-indent-level-declaration 2)
@@ -1641,6 +1061,5 @@ This function is called at the very end of Spacemacs initialization."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(highlight-parentheses-highlight ((nil (:weight ultra-bold))) t)
- '(org-transclusion-fringe ((t (:foreground "magenta"))))
- '(org-transclusion-source-fringe ((t (:foreground "gold")))))
 ) 
+)
